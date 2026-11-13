@@ -20,16 +20,11 @@ header small{color:#9ca3af;font-size:12px}
 main{padding:12px;max-width:760px;margin:auto}
 .sum{color:#6b7280;font-size:14px;margin:2px 2px 10px}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px}
-.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.ser{font-weight:800;letter-spacing:.3px;font-size:17px}
-.sub{color:#6b7280;font-size:14px;margin-top:3px}
-.n{font-variant-numeric:tabular-nums;white-space:nowrap}
-.gv{font-weight:700}.dt{color:#6b7280;font-size:13px}
-.old{color:#dc2626;font-weight:700}
-.det{margin-top:10px;padding-top:10px;border-top:1px dashed #e5e7eb;display:none}
-.card.open .det{display:block}
-.det div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
-.det span{color:#6b7280}
+.ten{font-weight:800;font-size:17px}
+.cfg{color:#374151;font-size:15px;margin-top:3px}
+.meta{color:#6b7280;font-size:14px;margin-top:5px}
+.meta b{color:#111827;font-weight:600}
+.gia{margin-top:6px;font-weight:800;color:#15803d}.gia span{color:#6b7280;font-weight:400;font-size:13px}
 .empty{color:#6b7280;text-align:center;padding:36px 12px}
 .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:10px;padding:12px;margin:12px;font-size:14px}
 </style>
@@ -37,40 +32,30 @@ main{padding:12px;max-width:760px;margin:auto}
 <body>
 <header>
   <div class="htop"><b>KHO – LAPTOP KHÁNH AN</b><small id="st">…</small><button class="rf" onclick="taiLai()">↻</button></div>
-  <input class="srch" id="q" placeholder="Tìm serial, tên máy, cấu hình…" autocapitalize="off" autocorrect="off" oninput="ve()">
+  <input class="srch" id="q" placeholder="Tìm tên máy, cấu hình, tình trạng…" autocapitalize="off" autocorrect="off" oninput="ve()">
 </header>
 <main id="main"><div class="empty">Đang tải…</div></main>
 
 <script>
 const SUPA_URL = 'https://chmuzlbtrshciachtcsv.supabase.co';
 const SUPA_KEY = 'sb_publishable_oEFL5z8AZ0DG7wp2vSUQ8g_ruYGXFbs';
-const COLS = {
-  nguoi_ban: 'ma_nb ten sdt ghi_chu tao_luc da_huy',
-  phieu_mua: 'ma_pm ngay_mua ma_nb dvvc ti_gia ghi_chu tao_luc da_huy',
-  may: 'ma_may ma_pm ten_hang gia_usd tracking trang_thai ngay_nhap serial cau_hinh pin tinh_trang noi_dung_sua phi_vc phi_sua gia_von gia_ban_du_tinh ngay_kiem_ke ghi_chu tao_luc'
-};
+const MAY_COLS = 'ma_may ma_pm ten_hang gia_usd tracking trang_thai ngay_nhap serial cau_hinh pin tinh_trang noi_dung_sua phi_vc phi_sua gia_von gia_ban_du_tinh ngay_kiem_ke ghi_chu tao_luc'.split(' ');
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const low = s => String(s==null?'':s).toLowerCase();
 const num = x => { const n=Number(String(x==null?'':x).replace(',','.')); return isFinite(n)?n:0; };
 const vnd = x => Math.round(num(x)).toLocaleString('vi-VN');
-const usd = x => num(x).toLocaleString('en-US',{maximumFractionDigits:2});
-const low = s => String(s==null?'':s).toLowerCase();
-const dd = s => { const x=String(s==null?'':s).slice(0,10); return /^\d{4}-\d{2}-\d{2}$/.test(x)?x.split('-').reverse().join('/'):''; };
-const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-const days = s => /^\d{4}-\d{2}-\d{2}/.test(String(s||''))?Math.floor((new Date(today())-new Date(String(s).slice(0,10)))/864e5):'';
 
-let KHO = [], NB = {}, PM = {};
+let KHO = [];
 async function taiLai(){
   $('st').textContent='tải…';
   try{
     const rows = await pullAll();
-    const T = {may:{},nguoi_ban:{},phieu_mua:{}};
-    rows.forEach(r=>{ if(T[r.tab]&&Array.isArray(r.data)) T[r.tab][r.id]=r.data; });
-    const obj = (tab,arr)=>{ const c=COLS[tab].split(' '); const o={}; c.forEach((k,i)=>o[k]=arr[i]); return o; };
-    NB={}; Object.values(T.nguoi_ban).forEach(a=>{const o=obj('nguoi_ban',a);NB[o.ma_nb]=o;});
-    PM={}; Object.values(T.phieu_mua).forEach(a=>{const o=obj('phieu_mua',a);PM[o.ma_pm]=o;});
-    KHO = Object.values(T.may).map(a=>obj('may',a)).filter(m=>m.trang_thai==='TRONG_KHO');
-    KHO.sort((a,b)=>String(a.ten_hang).localeCompare(String(b.ten_hang)));
+    const may = {};
+    rows.forEach(r=>{ if(r.tab==='may'&&Array.isArray(r.data)) may[r.id]=r.data; });
+    KHO = Object.values(may).map(a=>{ const o={}; MAY_COLS.forEach((k,i)=>o[k]=a[i]); return o; })
+             .filter(m=>m.trang_thai==='TRONG_KHO')
+             .sort((a,b)=>String(a.ten_hang).localeCompare(String(b.ten_hang)));
     $('st').textContent = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
     ve();
   }catch(e){
@@ -90,29 +75,23 @@ async function pullAll(){
   return out;
 }
 function ve(){
-  const q = low($('q').value.trim());
-  const w = q.split(/\s+/).filter(Boolean);
-  const ds = KHO.filter(m=>{ if(!w.length) return true; const h=low([m.serial,m.ten_hang,m.cau_hinh,m.tinh_trang,m.pin].join(' ')); return w.every(x=>h.includes(x)); });
-  const tongGv = ds.reduce((s,m)=>s+num(m.gia_von),0);
+  const w = low($('q').value.trim()).split(/\s+/).filter(Boolean);
+  const ds = KHO.filter(m=>{ if(!w.length) return true; const h=low([m.ten_hang,m.cau_hinh,m.tinh_trang,m.pin].join(' ')); return w.every(x=>h.includes(x)); });
   if(!KHO.length){ $('main').innerHTML='<div class="empty">Kho đang trống (hoặc chưa đồng bộ dữ liệu).</div>'; return; }
-  $('main').innerHTML = `<div class="sum">${ds.length} máy · giá vốn ${vnd(tongGv)} nghìn đ${q?' (lọc)':''}</div>` +
+  $('main').innerHTML = `<div class="sum">${ds.length} máy${w.length?' (lọc)':''}</div>` +
     (ds.length?ds.map(card).join(''):'<div class="empty">Không tìm thấy.</div>');
 }
 function card(m){
-  const d = days(m.ngay_nhap);
-  const pm = PM[m.ma_pm]||{}, nb = NB[pm.ma_nb]||{};
-  return `<div class="card" onclick="this.classList.toggle('open')">
-    <div class="row"><div><span class="ser">${esc(m.serial||'(chưa có serial)')}</span><div class="sub">${esc(m.ten_hang)}${m.cau_hinh?' · '+esc(m.cau_hinh):''}</div></div>
-      <div style="text-align:right"><div class="gv n">${vnd(m.gia_von)}</div>${num(m.gia_ban_du_tinh)?'<div class="dt n">bán ~'+vnd(m.gia_ban_du_tinh)+'</div>':''}</div></div>
-    <div class="det">
-      ${row('Pin',esc(m.pin))}${row('Tình trạng',esc(m.tinh_trang))}${row('Nội dung sửa',esc(m.noi_dung_sua))}
-      ${row('Ngày nhập',dd(m.ngay_nhap))}${row('Số ngày tồn', d===''?'':(d>30?'<span class="old">'+d+' ngày</span>':d+' ngày'))}
-      ${row('Người bán',esc(nb.ten))}${row('ĐVVC',esc(String(pm.dvvc||'').toUpperCase()))}
-      ${row('Giá mua',usd(m.gia_usd)+' USD')}${row('Giá vốn',vnd(m.gia_von)+' nghìn đ')}
-      ${row('Giá bán dự tính',num(m.gia_ban_du_tinh)?vnd(m.gia_ban_du_tinh)+' nghìn đ':'')}${row('Ghi chú',esc(m.ghi_chu))}
-    </div></div>`;
+  const meta = [];
+  if(m.pin) meta.push('Pin: <b>'+esc(m.pin)+'</b>');
+  if(m.tinh_trang) meta.push('<b>'+esc(m.tinh_trang)+'</b>');
+  return `<div class="card">
+    <div class="ten">${esc(m.ten_hang)}</div>
+    ${m.cau_hinh?`<div class="cfg">${esc(m.cau_hinh)}</div>`:''}
+    ${meta.length?`<div class="meta">${meta.join(' · ')}</div>`:''}
+    ${num(m.gia_ban_du_tinh)>0?`<div class="gia">${vnd(m.gia_ban_du_tinh)} <span>nghìn đ · giá bán dự kiến</span></div>`:''}
+  </div>`;
 }
-const row = (l,v) => (v===''||v==null)?'':`<div><span>${l}</span><b>${v}</b></div>`;
 taiLai();
 </script>
 </body>
