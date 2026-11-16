@@ -39,40 +39,45 @@ main{padding:12px;max-width:760px;margin:auto}
 <script>
 const SUPA_URL = 'https://chmuzlbtrshciachtcsv.supabase.co';
 const SUPA_KEY = 'sb_publishable_oEFL5z8AZ0DG7wp2vSUQ8g_ruYGXFbs';
-const MAY_COLS = 'ma_may ma_pm ten_hang gia_usd tracking trang_thai ngay_nhap serial cau_hinh pin tinh_trang noi_dung_sua phi_vc phi_sua gia_von gia_ban_du_tinh ngay_kiem_ke ghi_chu tao_luc'.split(' ');
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const low = s => String(s==null?'':s).toLowerCase();
 const num = x => { const n=Number(String(x==null?'':x).replace(',','.')); return isFinite(n)?n:0; };
 const vnd = x => Math.round(num(x)).toLocaleString('vi-VN');
 
+/* Bản 1.5: trang này CHỈ XEM máy trong kho, cần MÃ XEM (nhập 1 lần, điện thoại tự nhớ). */
 let KHO = [];
+const LS = 'qlbh_ma_xem';
+const maXem = () => { try { return localStorage.getItem(LS) || ''; } catch (e) { return ''; } };
+function hoiMa(loi){
+  $('st').textContent='';
+  $('main').innerHTML = `<div class="card"><div class="ten">Nhập mã xem</div>
+    ${loi?`<div class="meta" style="color:#991b1b">${esc(loi)}</div>`:''}
+    <input id="ma" class="srch" style="background:#f3f4f6;color:#111827" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="Mã xem">
+    <button class="rf" style="margin-top:10px;width:100%;padding:11px;background:#111827" onclick="luuMa()">Xem kho</button></div>`;
+  $('ma').onkeydown = e => { if (e.key === 'Enter') luuMa(); };
+  $('ma').focus();
+}
+function luuMa(){ const v = $('ma').value.trim(); if(!v) return; try { localStorage.setItem(LS, v); } catch (e) {} window._ma = v; taiLai(); }
 async function taiLai(){
+  const ma = window._ma || maXem();
+  if (!ma) return hoiMa('');
   $('st').textContent='tải…';
   try{
-    const rows = await pullAll();
-    const may = {};
-    rows.forEach(r=>{ if(r.tab==='may'&&Array.isArray(r.data)) may[r.id]=r.data; });
-    KHO = Object.values(may).map(a=>{ const o={}; MAY_COLS.forEach((k,i)=>o[k]=a[i]); return o; })
-             .filter(m=>m.trang_thai==='TRONG_KHO')
-             .sort((a,b)=>String(a.ten_hang).localeCompare(String(b.ten_hang)));
+    const res = await fetch(SUPA_URL.replace(/\/+$/,'')+'/rest/v1/rpc/kho_mobile', {
+      method:'POST', headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p_ma: ma }) });
+    if(!res.ok){
+      const t = await res.text();
+      if (/SAI_MA_XEM/.test(t)) { try { localStorage.removeItem(LS); } catch (e) {} window._ma = ''; return hoiMa('Mã xem không đúng'); }
+      throw new Error('Supabase '+res.status+(res.status===404?' (chưa chạy SQL nâng cấp 1.5)':''));
+    }
+    KHO = (await res.json()).sort((a,b)=>String(a.ten_hang).localeCompare(String(b.ten_hang)));
     $('st').textContent = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
     ve();
   }catch(e){
-    $('main').innerHTML = '<div class="err">Không tải được dữ liệu: '+esc(e.message)+'<br><br>Nếu app máy tính chưa đồng bộ lên Supabase thì ở đây sẽ trống.</div>';
+    $('main').innerHTML = '<div class="err">Không tải được dữ liệu: '+esc(e.message)+'</div>';
     $('st').textContent='lỗi';
   }
-}
-async function pullAll(){
-  const out=[]; let off=0; const lim=1000;
-  for(;;){
-    const res = await fetch(SUPA_URL.replace(/\/+$/,'')+'/rest/v1/app_data?select=tab,id,data&limit='+lim+'&offset='+off,
-      { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY } });
-    if(!res.ok) throw new Error('Supabase '+res.status);
-    const rows = await res.json();
-    out.push(...rows); if(rows.length<lim) break; off+=lim;
-  }
-  return out;
 }
 function ve(){
   const w = low($('q').value.trim()).split(/\s+/).filter(Boolean);
