@@ -22,6 +22,7 @@ main{padding:12px;max-width:760px;margin:auto}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .ten{font-weight:800;font-size:17px}
 .cfg{color:#374151;font-size:15px;margin-top:3px}
+.sr{color:#374151;font-size:14px;margin-top:2px;font-family:ui-monospace,Menlo,monospace;letter-spacing:.3px}.sr b{color:#111827}
 .meta{color:#6b7280;font-size:14px;margin-top:5px}
 .meta b{color:#111827;font-weight:600}
 .gia{margin-top:6px;font-weight:800;color:#15803d}.gia span{color:#6b7280;font-weight:400;font-size:13px}
@@ -32,7 +33,7 @@ main{padding:12px;max-width:760px;margin:auto}
 <body>
 <header>
   <div class="htop"><b>KHO – LAPTOP KHÁNH AN</b><small id="st">…</small><button class="rf" onclick="taiLai()">↻</button></div>
-  <input class="srch" id="q" placeholder="Tìm tên máy, cấu hình, tình trạng…" autocapitalize="off" autocorrect="off" oninput="ve()">
+  <input class="srch" id="q" placeholder="Tìm serial, tên máy, cấu hình…" autocapitalize="off" autocorrect="off" oninput="ve()">
 </header>
 <main id="main"><div class="empty">Đang tải…</div></main>
 
@@ -81,7 +82,7 @@ async function taiLai(){
 }
 function ve(){
   const w = low($('q').value.trim()).split(/\s+/).filter(Boolean);
-  const ds = KHO.filter(m=>{ if(!w.length) return true; const h=low([m.ten_hang,m.cau_hinh,m.tinh_trang,m.pin].join(' ')); return w.every(x=>h.includes(x)); });
+  const ds = KHO.filter(m=>{ if(!w.length) return true; const h=low([m.serial,m.ten_hang,m.cau_hinh,m.tinh_trang,m.pin].join(' ')); return w.every(x=>h.includes(x)); });
   if(!KHO.length){ $('main').innerHTML='<div class="empty">Kho đang trống (hoặc chưa đồng bộ dữ liệu).</div>'; return; }
   $('main').innerHTML = `<div class="sum">${ds.length} máy${w.length?' (lọc)':''}</div>` +
     (ds.length?ds.map(card).join(''):'<div class="empty">Không tìm thấy.</div>');
@@ -92,6 +93,7 @@ function card(m){
   if(m.tinh_trang) meta.push('<b>'+esc(m.tinh_trang)+'</b>');
   return `<div class="card">
     <div class="ten">${esc(m.ten_hang)}</div>
+    ${m.serial?`<div class="sr">Serial: <b>${esc(m.serial)}</b></div>`:''}
     ${m.cau_hinh?`<div class="cfg">${esc(m.cau_hinh)}</div>`:''}
     ${meta.length?`<div class="meta">${meta.join(' · ')}</div>`:''}
     ${num(m.gia_ban_du_tinh)>0?`<div class="gia">${vnd(m.gia_ban_du_tinh)} <span>nghìn đ · giá bán dự kiến</span></div>`:''}
